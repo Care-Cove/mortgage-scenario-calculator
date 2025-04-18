@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mortgage Scenarios</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    .section {
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .section h3 {
+      margin-top: 0;
+      color: green;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+    .row label {
+      font-weight: bold;
+    }
+    input[type="number"] {
+      width: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mortgage Scenario Calculator</h1>
+
+  <div class="row">
+    <label>Target Home Price: </label>
+    <input type="number" id="homePriceInput" value="500000" />
+  </div>
+  <div class="row">
+    <label>Down Payment: </label>
+    <input type="number" id="downPaymentInput" value="50000" />
+  </div>
+  <div class="row">
+    <label>Annual Income: </label>
+    <input type="number" id="incomeInput" value="100000" />
+  </div>
+  <br />
+  <button onclick="calculateScenarios()">Calculate Scenarios</button>
+
+  <div id="results"></div>
+
+  <script>
+    function calculatePMT(rate, nper, pv) {
+      return (rate * pv) / (1 - Math.pow(1 + rate, -nper));
+    }
+
+    function calculateMaxMortgage(monthlyInterestRate, totalPayments, monthlyPayment) {
+        const pv = monthlyPayment * (1 - Math.pow(1 + monthlyInterestRate, -totalPayments)) / monthlyInterestRate;
+        return pv;
+    }
+    function calculatePV(annualInterestRate, totalPayments, monthlyPayment, futureValue = 0) {
+        const pv = (monthlyPayment * (1 - Math.pow(1 + annualInterestRate, -totalPayments)) + futureValue * Math.pow(1 + annualInterestRate, -totalPayments)) / annualInterestRate;
+        return pv;
+}
+    function calculateTax(income){
+        let totalTax = 0;
+      if ( income > 200000){
+        totalTax = (income - 200000)*0.0855
+      }
+      totalTax += Math.min(income, 200000)*0.0765;
+      return totalTax
+    }
+    function calculateMonthlyMortgagePayment(monthlyRate, periods, principal) {
+        return (
+        (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -periods))
+    );
+    
+    } 
+
+    function calculateMortgagePaymentForScenerio_3_point_2(rate, nper, pmt) {
+      return pmt * ((1 - Math.pow(1 + rate, -nper)) / rate);
+     }
+
+    const loanTermMonths = 30 * 12;
+    const annualInterestRate = 0.0669;
+    const monthlyInterestRate = annualInterestRate / 12;
+    const housingRatio = 0.28;
+    const propertyTaxRate = 0.011;
+    const insuranceRate = 0.0035;
+    const pmiRate = 0.005;
+    const lowDownpaymentRate = 0.03;
+    function calculateFirstScenario(title, homePrice, downPayment, income) {
+     
+      let totalTax = calculateTax(income);
+      let grossIncome = income -  totalTax;
+
+      const grossMonthlyIncome = Math.round(grossIncome / 12);
+      console.log('grossMonthlyIncome is', grossMonthlyIncome);
+     
+      const monthlyPropertyTax = (homePrice * propertyTaxRate) / 12;
+      const monthlyInsurance = (homePrice * insuranceRate) / 12;
+     
+      let  maxMortgagePayment = housingRatio *grossMonthlyIncome - monthlyInsurance - monthlyPropertyTax
+      
+      let maxMortgage = calculateMaxMortgage(monthlyInterestRate, 360, maxMortgagePayment);
+
+      // max mortgage can be homeprice*0.8
+      console.log(' maxMortgage is ', maxMortgage);
+      let mortgage = maxMortgage
+      if( maxMortgage >= homePrice*0.8)
+         mortgage =homePrice*0.8
+     console.log('maxMortgagePayment is ', maxMortgagePayment);
+     console.log('mortgage is ', mortgage);
+
+      const coInvestment = homePrice - mortgage - downPayment;
+      // calcualte montly mortgage payment
+      const monthlyMortgagePayment =  calculateMonthlyMortgagePayment(monthlyInterestRate, 360, mortgage)
+
+      return {
+        title,
+        maxMortgagePayment,
+        maxMortgage,
+        homePrice,
+        downPayment,
+        coInvestment,
+        mortgage,
+        monthlyMortgagePayment
+      };
+    }
+    function calculateSecondScenario(title, homePrice, downPayment, income) {
+     // make downPayment minimum 
+        downPayment = Math.min(homePrice*lowDownpaymentRate, downPayment)
+        let totalTax = calculateTax(income);
+        let grossIncome = income -  totalTax;
+
+        const grossMonthlyIncome = Math.round(grossIncome / 12);
+        console.log('grossMonthlyIncome is', grossMonthlyIncome);
+    
+     const monthlyPropertyTax = (homePrice * propertyTaxRate) / 12;
+     const monthlyInsurance = (homePrice * insuranceRate) / 12;
+    
+     let  maxMortgagePayment = housingRatio *grossMonthlyIncome - monthlyInsurance - monthlyPropertyTax
+     
+     let maxMortgage = calculateMaxMortgage(monthlyInterestRate, 360, maxMortgagePayment);
+
+    
+      let mortgage = calculatePV(monthlyInterestRate, 360, )
+     console.log('mortgage is ', mortgage);
+
+     const coInvestment = homePrice - maxMortgage - downPayment;
+     const monthlyMortgagePayment = 'needs to calculate';
+
+     return {
+      title,
+        maxMortgagePayment,
+        maxMortgage,
+        homePrice,
+        downPayment,
+        coInvestment,
+        mortgage,
+        monthlyMortgagePayment
+     };
+   }
+    
+    function calculateThirdScenario(title, homePrice, downPayment, income, firstScenerioDataMonthlyMortgagePayment, firstScenerioDataMaxMortgagePayment){
+           let newHomePrice = homePrice;
+           if( firstScenerioDataMonthlyMortgagePayment < firstScenerioDataMaxMortgagePayment)     {
+            newHomePrice = homePrice*1.2; // round off to nearest 50K
+              console.log('---------     scenerio 3.1')
+              title = 'Scenario 3.1'
+           } else title = 'Scenario 3.2';
+      
+      
+           let totalTax = calculateTax(income);
+           let grossIncome = income -  totalTax;
+     
+           const grossMonthlyIncome = Math.round(grossIncome / 12);
+           console.log('grossMonthlyIncome is', grossMonthlyIncome);
+          
+           const monthlyPropertyTax = (homePrice * propertyTaxRate) / 12;
+           const monthlyInsurance = (homePrice * insuranceRate) / 12;
+          
+           let  maxMortgagePayment = housingRatio *grossMonthlyIncome - monthlyInsurance - monthlyPropertyTax
+           
+           let maxMortgage = calculateMaxMortgage(monthlyInterestRate, 360, maxMortgagePayment);
+           
+           let coInvestment;
+           console.log('third maxMortgage is ', maxMortgage);
+           let mortgage = maxMortgage;
+           if( firstScenerioDataMonthlyMortgagePayment < firstScenerioDataMaxMortgagePayment)     {
+               // max mortgage can be homeprice*0.8
+              
+               if( maxMortgage >= homePrice*0.8)
+                   mortgage =homePrice*0.8
+               console.log('maxMortgagePayment is ', maxMortgagePayment);
+               console.log('mortgage is ', mortgage);
+               coInvestment = newHomePrice - mortgage - downPayment;
+           } else{
+                coInvestment = downPayment;
+                mortgage = calculateMortgagePaymentForScenerio_3_point_2(monthlyInterestRate, 360, maxMortgagePayment- monthlyInsurance - monthlyPropertyTax);
+                
+           }
+          
+
+     
+          
+           // calcualte montly mortgage payment
+           const monthlyMortgagePayment =  calculateMonthlyMortgagePayment(monthlyInterestRate, 360, mortgage)
+     
+           return {
+             title,
+             maxMortgagePayment,
+             maxMortgage,
+             homePrice,
+             downPayment,
+             coInvestment,
+             mortgage,
+             monthlyMortgagePayment
+           };
+         }
+     
+   function displayScenario(data) {
+      const section = document.createElement("div");
+      section.className = "section";
+      section.innerHTML = `
+        <h3>${data.title}</h3> 
+        <div class="row"><label>max Mortgage Payment :</label> <span>$${data.maxMortgagePayment.toFixed(2)}</span></div>
+        <div class="row"><label>Monthly Max Mortgage:</label> <span>$${data.maxMortgage.toFixed(2)}</span></div>
+        <div class="row"><label>House Price:</label> <span>$${data.homePrice.toLocaleString()}</span></div>
+        <div class="row"><label>Down Payment:</label> <span>$${data.downPayment.toLocaleString()}</span></div>
+        <div class="row"><label>Co-Investment:</label> <span>$${data.coInvestment.toLocaleString()}</span></div>
+        <div class="row"><label>Mortgage:</label> <span>$${data.mortgage.toFixed(2)}</span></div>
+        <div class="row"><label>Monthly Mortgage Payment:</label> <span>$${data.monthlyMortgagePayment.toFixed(2)}</span></div>
+       
+       
+      `;
+      return section;
+    }
+
+    function calculateScenarios() {
+      const baseHomePrice = parseFloat(document.getElementById('homePriceInput').value);
+      const downPayment = parseFloat(document.getElementById('downPaymentInput').value);
+      const income = parseFloat(document.getElementById('incomeInput').value);
+
+      const container = document.getElementById("results");
+      container.innerHTML = "";
+
+      const scenarios = [
+        { title: "Scenario 1", homePrice: baseHomePrice, downPayment: downPayment },
+        { title: "Scenario 2", homePrice: Math.round(baseHomePrice * 1.2), downPayment: downPayment },
+        { title: "Scenario 3", homePrice: baseHomePrice, downPayment: downPayment }
+      ];
+  
+      const firstScenerioData = calculateFirstScenario(scenarios[0].title, scenarios[0].homePrice, scenarios[0].downPayment, income);
+      const section1 = displayScenario(firstScenerioData);
+      const thirdScenerioData = calculateThirdScenario(scenarios[2].title, scenarios[2].homePrice, scenarios[2].downPayment, income, firstScenerioData.monthlyMortgagePayment, firstScenerioData.maxMortgagePayment )
+      const section2 = displayScenario(thirdScenerioData);
+      container.appendChild(section1);
+      container.appendChild(section2);
+      // scenarios.forEach(({ title, homePrice, downPayment }) => {
+      //   const data = calculateOneScenario(title, homePrice, downPayment, income);
+      //   const section = displayScenario(data);
+      //   container.appendChild(section);
+      // });
+    }
+  </script>
+</body>
+</html>

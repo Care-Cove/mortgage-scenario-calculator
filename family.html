@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Mortgage Scenario Calculator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input { padding: 5px; width: 150px; }
+    h2 { color: green; }
+  </style>
+</head>
+<body>
+  <h1>Family Mortgage Scenario Calculator</h1>
+
+  <div class="section">
+    <h2>Inputs</h2>
+    <label>Home Price: <input type="number" id="homePrice" value="500000"></label>
+    <label>Buyer Down Payment: <input type="number" id="buyerDP" value="50000"></label>
+    <label>Co-Investor Down Payment: <input type="number" id="COInvestorDP" value="50000"></label>
+    <label>Mortgage Rate (Annual %): <input type="number" id="interestRate" value="6.69" step="0.01"></label>
+    <label>Property Tax Rate: <input type="number" id="propertyTaxRate" value="1.1" step="0.0001"></label>
+    <label>Insurance Rate: <input type="number" id="insuranceRate" value="0.35" step="0.0001"></label>
+    <label>PMI Rate (if DP < 20%): <input type="number" id="pmiRate" value="0.5" step="0.0001"></label>
+    <label>Loan Term (Years): <input type="number" id="loanTerm" value="30"></label>
+    <label>Sell House After Years: <input type="number" id="sellAfterYear" value="8"></label>
+    <label>Appreciation Fee (%): <input type="number" id="apprecationFees" value="3" step="0.0001"></label>
+    <label>Annual Return (%): <input type="number" id="annualReturnRate" value="3" step="0.0001"></label>
+    <button onclick="calculate()">Calculate</button>
+  </div>
+
+  <div class="section" id="section1">
+    <h2>Scenario 1: Conventional Approach (20% Down)</h2>
+  </div>
+
+  <div class="section" id="section2">
+    <h2>Scenario 2: What Could a Larger Investment Unlock?</h2>
+   
+  </div>
+
+  <script>
+    function renderScenarioItems({ items, targetId, labelPrefix }) {
+  const container = document.getElementById(targetId);
+  let h2 = container.querySelector('h2')
+  container.innerHTML = '';
+  container.appendChild(h2);
+  items.forEach(({ name, value }) => {
+    const id = `${name}`;
+    const row = document.createElement('p');
+    row.id = id;
+    row.innerHTML = `${id}: <span> $${value.toFixed(2)} <span>`;
+    container.appendChild(row);
+  });
+
+}
+    function calculate() {
+      const homePrice = parseFloat(document.getElementById('homePrice').value);
+      const buyerDP = parseFloat(document.getElementById('buyerDP').value);
+      const COInvestorDP = parseFloat(document.getElementById('COInvestorDP').value);
+      const annualInterestRate = (parseFloat(document.getElementById('interestRate').value)/100);
+      const termYears = parseInt(document.getElementById('loanTerm').value);
+      const monthlyInterestRate = annualInterestRate / 12;
+      const housingRatio = 0.28;
+      const payrollTax = 0.08;
+      const SellAfterYear = parseFloat(document.getElementById('sellAfterYear').value) ; // when you are going to sell
+      const annualReturnRate = parseFloat(document.getElementById('annualReturnRate').value)/100 
+      const closingCostRate = 0.08 // basically  at the time of sell.
+      const apprecationFees = parseInt(document.getElementById('apprecationFees').value)/100;
+      const taxRate = parseFloat(document.getElementById('propertyTaxRate').value)/100;
+      const insuranceRate = parseFloat(document.getElementById('insuranceRate').value)/100;
+      const pmiRate = parseFloat(document.getElementById('pmiRate').value)/100;
+
+      function calculateMonthlyMortgagePayment(monthlyInterestRate, periods, principal) {
+  return (principal * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -periods));
+}
+        function calculateRemainingLoanBalance(principal, annualRate, termYears, paymentsMade) {
+        const r = annualRate / 12; // Monthly interest rate (full precision)
+        const n = termYears * 12;  // Total payments (e.g., 30 years = 360)
+        const t = paymentsMade;
+
+        const pow_n = Math.pow(1 + r, n);
+        const pow_t = Math.pow(1 + r, t);
+        const numerator = pow_n - pow_t;
+        const denominator = pow_n - 1;
+
+        const ratio = numerator / denominator;
+        const balance = principal * ratio;
+
+        return Math.round(balance * 100) / 100;
+        }
+      function calculateFirstScenario(homePrice, COInvestorDP, labelPrefix) {
+        let dp = homePrice * 0.20;
+        const mortgage = homePrice - dp;
+        const monthlyMortgagePayment = calculateMonthlyMortgagePayment(monthlyInterestRate, 360, mortgage);
+        const monthlyTax = (homePrice * taxRate) / 12;
+        const monthlyInsurance = (homePrice * insuranceRate) / 12;
+        const pmi = (dp / homePrice < 0.2) ? (mortgage * pmiRate) / 12 : 0;
+        console.log('monthlyTax ', monthlyTax);
+        console.log('monthlyInsurance ', monthlyInsurance);
+
+        const totalMonthly = monthlyMortgagePayment + monthlyTax + monthlyInsurance + pmi;
+        // const annualRequiredIncome = totalMonthly * 12 / 0.28;
+        const annualRequiredIncome = ((monthlyMortgagePayment + monthlyInsurance + monthlyTax) / ((housingRatio) *(1-payrollTax))) * 12;
+
+        const salesPrice = homePrice * Math.pow(1 + annualReturnRate, SellAfterYear);
+
+        const totalRepayMortgageAtSellTime = (-1)*calculateRemainingLoanBalance(mortgage, annualInterestRate, termYears, SellAfterYear*12);
+        // const totalRepayMortgageAtSellTime = -1*(monthlyMortgagePayment * SellAfterYear * 12); // since it's paid hence in negative
+
+        const proceeds = salesPrice + totalRepayMortgageAtSellTime;
+
+        const closingCost = -1* (salesPrice*closingCostRate);
+        const investor = COInvestorDP + ( ((COInvestorDP/homePrice) * salesPrice) - COInvestorDP) * (1- apprecationFees);
+
+        const buyer = proceeds + closingCost - investor;
+        const items = [
+                { name: 'Down Payment ', value: dp },
+                { name: 'Mortgage', value: mortgage },
+                { name: 'Monthly', value: monthlyMortgagePayment },
+                { name: 'Income', value: annualRequiredIncome },
+                { name: 'Sale', value: salesPrice },
+                { name: 'Total Repay Mortgage at sell Time', value: totalRepayMortgageAtSellTime },
+                { name: 'Proceeds', value: proceeds },
+                { name: 'ClosingCost', value: closingCost },
+                { name: 'Investor gets', value: investor },
+                { name: 'Buyer gets', value: buyer }
+            ];
+             renderScenarioItems({
+                 items: items,
+               targetId: 'section1',
+                labelPrefix: 'scenario1'
+            });
+      }
+      function calculateSecondScenario(homePrice, COInvestorDP, labelPrefix) {
+       
+        let dp = homePrice * 0.20; // that is needed
+        // but our coinvestment is here 0, so we want to calcualte how much house price you can afford
+        COInvestorDP =0;
+        // we assume equal covinvesntment hence diving by 2
+        dp = dp/2;
+        // generally min downpayment is half of the house, so max mortgage will be
+        const mortgage = dp/0.2; 
+        
+        const buyerDP = dp;
+        // new house price that you can afford
+        const newHomePrice = mortgage + dp;
+       
+       
+
+       
+        const monthlyMortgagePayment = calculateMonthlyMortgagePayment(monthlyInterestRate, 360, mortgage);
+        const monthlyTax = (newHomePrice * taxRate) / 12;
+        const monthlyInsurance = (newHomePrice * insuranceRate) / 12;
+        const pmi = (dp / newHomePrice < 0.2) ? (mortgage * pmiRate) / 12 : 0;
+        console.log('monthlyTax ', monthlyTax);
+        console.log('monthlyInsurance ', monthlyInsurance);
+
+        const totalMonthly = monthlyMortgagePayment + monthlyTax + monthlyInsurance + pmi;
+        // const annualRequiredIncome = totalMonthly * 12 / 0.28;
+        const annualRequiredIncome = ((monthlyMortgagePayment + monthlyInsurance + monthlyTax) / ((housingRatio) *(1-payrollTax))) * 12;
+
+        const salesPrice = newHomePrice * Math.pow(1 + annualReturnRate, SellAfterYear);
+
+        const totalRepayMortgageAtSellTime = (-1)*calculateRemainingLoanBalance(mortgage, annualInterestRate, termYears, SellAfterYear*12);
+        // const totalRepayMortgageAtSellTime = -1*(monthlyMortgagePayment * SellAfterYear * 12); // since it's paid hence in negative
+
+        const proceeds = salesPrice + totalRepayMortgageAtSellTime;
+
+        const closingCost = -1* (salesPrice*closingCostRate);
+        const investor = COInvestorDP + ( ((COInvestorDP/newHomePrice) * salesPrice) - COInvestorDP) * (1- apprecationFees);
+
+        const buyer = proceeds + closingCost - investor;
+        const items = [
+                { name: 'Down Payment ', value: dp },
+                { name: 'Mortgage', value: mortgage },
+                { name: 'Monthly', value: monthlyMortgagePayment },
+                { name: 'Income', value: annualRequiredIncome },
+                { name: 'Sale', value: salesPrice },
+                { name: 'Total Repay Mortgage at sell Time', value: totalRepayMortgageAtSellTime },
+                { name: 'Proceeds', value: proceeds },
+                { name: 'ClosingCost', value: closingCost },
+                { name: 'Investor gets', value: investor },
+                { name: 'Buyer gets', value: buyer }
+            ];
+             renderScenarioItems({
+                 items: items,
+               targetId: 'section2',
+                labelPrefix: 'scenario2'
+            });
+      }
+
+      calculateFirstScenario(homePrice,COInvestorDP,  's1');
+      calculateSecondScenario(homePrice, COInvestorDP, 's2');
+    }
+  </script>
+</body>
+</html>

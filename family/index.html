@@ -32,6 +32,9 @@
       width: 48%;
     }
   </style>
+  <script type="module"src="./familyPdfGenerator.js"></script>
+  <script type="module"src="./familyPdfTemplate.js"></script>
+  <script type="module"src="./familyScenerioCalculator.js"></script>
 </head>
 <body>
   <h1>Family Mortgage Scenario Calculator</h1>
@@ -61,7 +64,9 @@
     <h2>Scenario 2: What Could a Larger Investment Unlock?</h2>
    
   </div>
+ 
 </div>
+<div id="results"></div>
   <script>
     function formatCurrency(value) {
   return `$${Math.round(value).toLocaleString()}`;
@@ -82,6 +87,7 @@
 
 }
     function calculate() {
+      window.calculateFamilyScenarios();
       const homePrice = parseFloat(document.getElementById('homePrice').value);
       const buyerDP = parseFloat(document.getElementById('buyerDP').value);
       const COInvestorDP = parseFloat(document.getElementById('COInvestorDP').value);
